@@ -1,0 +1,9 @@
+src/
+	App.tsx
+	main.tsx
+	index.css
+	types.ts
+	hooks/
+	lib/
+	components/
+	pages/
