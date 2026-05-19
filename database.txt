@@ -1,0 +1,34 @@
+Question:
+-title
+-description
+-user
+-id
+-voturi - up/down
+-created_at
+-answer 
+-tags : [...]
+
+
+user:
+id PK
+first_name
+last_name
+username
+
+tag_assignments:
+tag_id       FK
+question_id  FK 
+,composite_PK between tag_id and q_id
+
+questions:
+id : primary
+title
+description
+user_id FK catre user 
+
+votes:
+upvote 
+user_id
+question_id
+
+
