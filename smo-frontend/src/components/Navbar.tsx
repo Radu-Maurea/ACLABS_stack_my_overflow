@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export function Header() {
+export function Navbar() {
   const navigate = useNavigate()
   return (
     <header className="w-full border-b-4 border-orange-500 px-4 pt-5 pb-5 flex justify-between items-center">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-function Signup() {
+function SignUp() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -65,4 +65,4 @@ function Signup() {
   )
 }
 
-export default Signup
+export default SignUp

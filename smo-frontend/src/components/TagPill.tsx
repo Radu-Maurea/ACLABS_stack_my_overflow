@@ -16,7 +16,7 @@ export function tagColor(name: string): string {
   return TAG_COLOR_MAP[first] ?? FALLBACK_COLOR
 }
 
-export function Tag({ name }: { name: string }) {
+export function TagPill({ name }: { name: string }) {
   return (
     <span className={`text-xs font-medium px-3 py-1 rounded-full ${tagColor(name)}`}>
       {name}

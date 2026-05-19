@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import type { QuestionSummary } from '../types'
-import { Tag } from './Tag'
+import { TagPill } from './TagPill'
 import { Upvote } from './Upvote'
 import { Status } from './Status'
 
@@ -18,7 +18,7 @@ function QuestionCard({ question }: Props) {
     >
       <div className="flex gap-2 flex-wrap mb-3">
         {question.question_tags.map((qt) => (
-          <Tag key={qt.tag.name} name={qt.tag.name} />
+          <TagPill key={qt.tag.name} name={qt.tag.name} />
         ))}
       </div>
 
