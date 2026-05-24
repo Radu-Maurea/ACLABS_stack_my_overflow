@@ -3,14 +3,25 @@ import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 
 function SignIn() {
-  const { login, isLoading } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const handleLogin = async () => {
-    await login(email, password)
-    navigate('/')
+    setError(null)
+    setSubmitting(true)
+    try {
+      const { error } = await login(email, password)
+      if (error) { setError(error); return }
+      navigate('/')
+    } catch (e) {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -49,12 +60,14 @@ function SignIn() {
             <a href="#" className="text-xs text-orange-500 hover:underline">Forgot password?</a>
           </div>
 
+          {error && <p className="text-xs text-red-500 text-center -mb-1">{error}</p>}
+
           <button
             onClick={handleLogin}
-            disabled={isLoading}
+            disabled={submitting}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold py-2 rounded-full transition"
           >
-            {isLoading ? 'Signing in...' : 'Log In'}
+            {submitting ? 'Signing in...' : 'Log In'}
           </button>
         </div>
 

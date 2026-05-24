@@ -5,6 +5,7 @@ import AskQuestion from './pages/AskQuestion'
 import Home from './pages/Home'
 import QuestionDetailPage_ from './pages/QuestionDetail'
 import { mockQuestionDetails } from './data/mockDataDetail.ts'
+import { AuthProvider } from './hooks/useAuth'
 
 function QuestionDetailPage() {
   const { id } = useParams()
@@ -19,17 +20,19 @@ function QuestionDetailPage() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-white">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/question/:id" element={<QuestionDetailPage />} />
-        <Route path="/questions/new" element={<AskQuestion />} />
-      </Routes>
-      </div>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="min-h-screen bg-white">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/question/:id" element={<QuestionDetailPage />} />
+            <Route path="/questions/new" element={<AskQuestion />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

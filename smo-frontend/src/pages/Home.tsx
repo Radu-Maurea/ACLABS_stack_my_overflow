@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { mockQuestions } from '../data/mockData'
 import { Navbar } from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
+import { useAuth } from '../hooks/useAuth'
 
 function Home() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchMode, setSearchMode] = useState<'questions' | 'tags'>('questions')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [showToast, setShowToast] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -21,6 +25,20 @@ function Home() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Clean up toast timer on unmount
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
+
+  const handleNewQuestion = () => {
+    if (!user) {
+      // Show the toast, reset its auto-dismiss timer each time
+      setShowToast(true)
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+      toastTimer.current = setTimeout(() => setShowToast(false), 3000)
+      return
+    }
+    navigate('/questions/new')
+  }
 
   const filtered = mockQuestions.filter((q) =>
     searchMode === 'questions'
@@ -73,7 +91,10 @@ function Home() {
               className={`rounded-full px-6 py-3 bg-gray-100 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all duration-500 ease-in-out ${searchFocused || search ? 'flex-1' : 'w-48'}`}
             />
           </div>
-          <button onClick={() => navigate('/questions/new')} className="shrink-0 px-5 py-3 rounded-full bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 hover:shadow-md transition whitespace-nowrap">
+          <button
+            onClick={handleNewQuestion}
+            className="shrink-0 px-5 py-3 rounded-full bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 hover:shadow-md transition whitespace-nowrap"
+          >
             + New
           </button>
         </div>
@@ -81,6 +102,17 @@ function Home() {
         {filtered.map((q) => (
           <QuestionCard key={q.id} question={q} />
         ))}
+      </div>
+
+      {/* Login required toast */}
+      <div
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out ${
+          showToast ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="bg-white rounded-xl px-5 py-3 text-sm font-medium text-red-600 border border-red-400 shadow-[0_0_18px_4px_rgba(239,68,68,0.3)] whitespace-nowrap">
+          🔒 You need to be logged in to post
+        </div>
       </div>
     </div>
   )
