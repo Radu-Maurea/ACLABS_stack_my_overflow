@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { tagColor } from '../components/TagPill'
 import { useAuth } from '../hooks/useAuth'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string
+import { request } from '../lib/api'
 
 function RemovableTag({ name, onRemove }: { name: string; onRemove: () => void }) {
   return (
@@ -24,7 +22,7 @@ function RemovableTag({ name, onRemove }: { name: string; onRemove: () => void }
 
 function AskQuestion() {
   const navigate = useNavigate()
-  const { user, accessToken } = useAuth()
+  const { user, accessToken, refreshProfile } = useAuth()
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -52,19 +50,6 @@ function AskQuestion() {
     }
   }
 
-  // Authenticated fetch helper — uses the stored token, never calls getSession()
-  function dbFetch(path: string, options: RequestInit = {}) {
-    return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${accessToken}`,
-        ...(options.headers ?? {}),
-      },
-    })
-  }
-
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
 
@@ -87,52 +72,15 @@ function AskQuestion() {
     setSubmitting(true)
 
     try {
-      const questionId = crypto.randomUUID()
-
-      // 1. Insert the question
-      const qRes = await dbFetch('/questions', {
+      // Trimitem tot catre backend — el se ocupa de tags, question_tags si reputatie (+15)
+      await request('/questions', {
         method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify({
-          id: questionId,
-          title: title.trim(),
-          description: description.trim(),
-          author_id: user.id,
-        }),
-      })
-      if (!qRes.ok) {
-        const body = await qRes.text()
-        throw new Error(`Failed to post question (${qRes.status}): ${body}`)
-      }
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), tags: finalTags }),
+      }, accessToken)
 
-      // 2. For each tag: insert (ignore conflict) → fetch id → link to question
-      for (const tagName of finalTags) {
-        // Insert tag — on_conflict=name silently ignores duplicates (no 409)
-        await dbFetch('/tags?on_conflict=name', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
-          body: JSON.stringify({ name: tagName }),
-        })
-
-        // Fetch tag id by name
-        const tRes = await dbFetch(`/tags?name=eq.${encodeURIComponent(tagName)}&select=id`)
-        if (!tRes.ok) throw new Error(`Failed to fetch tag (${tRes.status})`)
-        const tagRows: { id: string }[] = await tRes.json()
-        if (!tagRows.length) throw new Error(`Tag not found after insert: ${tagName}`)
-
-        // Link tag to question
-        const qtRes = await dbFetch('/question_tags', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ question_id: questionId, tag_id: tagRows[0].id }),
-        })
-        if (!qtRes.ok) {
-          const body = await qtRes.text()
-          throw new Error(`Failed to link tag (${qtRes.status}): ${body}`)
-        }
-      }
-
+      // Navigam imediat la home, refresh profilului ruleaza in fundal
       navigate('/')
+      refreshProfile().catch(() => {})
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong.'
       setErrors({ general: msg })

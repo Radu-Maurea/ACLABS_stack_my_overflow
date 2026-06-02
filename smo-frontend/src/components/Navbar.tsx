@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 
 export function Navbar() {
   const navigate = useNavigate()
-  const { user, username, logout } = useAuth()
+  const { user, username, reputation, logout } = useAuth()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -61,6 +61,14 @@ export function Navbar() {
             <div className={`absolute right-0 mt-2 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50 transition-all duration-200 origin-top-right ${
               dropdownOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
             }`}>
+              {/* Reputatie — doar afisare */}
+              <div className="px-4 py-3 flex items-center justify-between">
+                <span className="text-xs text-gray-400">Reputație</span>
+                <span className="text-xs font-semibold text-orange-500">
+                  {reputation ?? 0}
+                </span>
+              </div>
+              <div className="h-px bg-gray-100" />
               <button
                 onClick={() => { setDropdownOpen(false); navigate('/?filter=mine') }}
                 className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"

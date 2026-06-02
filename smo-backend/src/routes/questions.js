@@ -59,12 +59,24 @@ router.post('/', requireAuth, async (req, res) => {
       .select()
       .single()
 
-    // Legam tag-ul de intrebare in tabela de legatura
     await supabase.from('question_tags')
       .insert({ question_id: question.id, tag_id: tag.id })
   }
 
-  res.status(201).json(question)
+  // +15 reputatie pentru postarea unei intrebari noi
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('reputation')
+    .eq('id', req.user.id)
+    .single()
+
+  const newReputation = (profile?.reputation ?? 0) + 15
+
+  await supabase.from('profiles')
+    .update({ reputation: newReputation })
+    .eq('id', req.user.id)
+
+  res.status(201).json({ ...question, reputation: newReputation })
 })
 
 // ─────────────────────────────────────────────
@@ -130,4 +142,5 @@ router.patch('/:id/vote', requireAuth, async (req, res) => {
 })
 
 module.exports = router
+
 
