@@ -46,9 +46,13 @@ async function renderPreview(text: string): Promise<string> {
   return rendered.join('')
 }
 
-export function AnswerEditor() {
+interface AnswerEditorProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+export function AnswerEditor({ value, onChange }: AnswerEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [value, setValue] = useState('')
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const [preview, setPreview] = useState('')
 
@@ -65,7 +69,7 @@ export function AnswerEditor() {
     const end = ta.selectionEnd
     const selected = value.substring(start, end)
     const newValue = value.substring(0, start) + before + selected + after + value.substring(end)
-    setValue(newValue)
+    onChange(newValue)
     requestAnimationFrame(() => {
       ta.focus()
       ta.setSelectionRange(start + before.length, end + before.length)
@@ -134,7 +138,7 @@ export function AnswerEditor() {
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           placeholder="Write your answer here..."
           rows={6}
           className="w-full px-5 py-4 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none resize-none"

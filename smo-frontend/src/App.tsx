@@ -1,22 +1,10 @@
-import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import SignIn from './pages/SignIn'
-import SignUp from './pages/SignUp'
+import SignUp from './pages/Signup'
 import AskQuestion from './pages/AskQuestion'
 import Home from './pages/Home'
-import QuestionDetailPage_ from './pages/QuestionDetail'
-import { mockQuestionDetails } from './data/mockDataDetail.ts'
+import QuestionDetailPage from './pages/QuestionDetail'
 import { AuthProvider } from './hooks/useAuth'
-
-function QuestionDetailPage() {
-  const { id } = useParams()
-  const question = mockQuestionDetails.find((q) => q.id === id)
-
-  if (!question) {
-    return <div className="max-w-3xl mx-auto p-6 text-gray-500">Question not found.</div>
-  }
-
-  return <QuestionDetailPage_ question={question} />
-}
 
 function App() {
   return (

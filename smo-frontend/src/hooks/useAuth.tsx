@@ -35,6 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(session?.user ?? null)
         setAccessToken(session?.access_token ?? null)
+        // Stocam imediat in localStorage — nu asteptam onAuthStateChange
+        if (session?.access_token) {
+          localStorage.setItem('smo_token', session.access_token)
+          localStorage.setItem('smo_refresh', session.refresh_token ?? '')
+        }
         if (session?.user) setUsername(await fetchUsername(session.user.id))
       } catch (e) {
         console.error('Error restoring session:', e)
@@ -48,6 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       setAccessToken(session?.access_token ?? null)
       setUsername(session?.user ? await fetchUsername(session.user.id) : null)
+      // Sincronizam in localStorage pentru api.ts (apeluri catre backend)
+      if (session?.access_token) {
+        localStorage.setItem('smo_token', session.access_token)
+        localStorage.setItem('smo_refresh', session.refresh_token ?? '')
+      } else {
+        localStorage.removeItem('smo_token')
+        localStorage.removeItem('smo_refresh')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -58,6 +71,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error && data.user && data.session) {
       setUser(data.user)
       setAccessToken(data.session.access_token)
+      // Stocam imediat in localStorage pentru api.ts
+      localStorage.setItem('smo_token', data.session.access_token)
+      localStorage.setItem('smo_refresh', data.session.refresh_token ?? '')
       setUsername(await fetchUsername(data.user.id))
     }
     return { error: error?.message ?? null }
@@ -77,6 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setUsername(null)
     setAccessToken(null)
+    localStorage.removeItem('smo_token')
+    localStorage.removeItem('smo_refresh')
     await supabase.auth.signOut()
   }
 

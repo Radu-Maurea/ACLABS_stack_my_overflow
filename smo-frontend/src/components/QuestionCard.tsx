@@ -6,9 +6,10 @@ import { Status } from './Status'
 
 interface Props {
   question: QuestionSummary
+  voted?: boolean
 }
 
-function QuestionCard({ question }: Props) {
+function QuestionCard({ question, voted }: Props) {
   const navigate = useNavigate()
 
   return (
@@ -26,7 +27,7 @@ function QuestionCard({ question }: Props) {
 
       <div className="flex items-center gap-3">
         <Status solved={question.is_solved} />
-        <Upvote count={question.vote_count} />
+        <Upvote count={question.vote_count} targetId={question.id} targetType="question" voted={voted} />
         <span className="text-xs text-gray-700">
           💬 {question.answer_count} · {new Date(question.created_at).toLocaleDateString()}
         </span>

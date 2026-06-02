@@ -23,7 +23,6 @@ export interface Question{
     description:string;
     author_id: string;
     is_solved: boolean;
-    allow_ai_companion:boolean;
     vote_count: number;
     created_at: string;
     author: {id: string; username:string} | null;
@@ -39,7 +38,6 @@ export interface Answer{
     author_id:string;
     vote_count:number;
     is_accepted: boolean;
-    is_ai_generated:boolean;
     created_at: string;
     author: {id: string; username:string} | null;
     comments: Comment[];
