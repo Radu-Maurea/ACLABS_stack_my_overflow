@@ -24,7 +24,7 @@ export function Sidebar() {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => navigate(active ? '/' : item.path)}
               className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 active
                   ? 'bg-orange-50 text-orange-500'
