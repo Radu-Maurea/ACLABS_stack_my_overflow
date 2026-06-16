@@ -345,6 +345,14 @@ function QuestionDetailPage() {
                     ? 'border-orange-200 bg-orange-50/20 shadow-[0_0_18px_rgba(251,146,60,0.2)]'
                     : ''
               }`}>
+              {a.author_id === SMO_AI_USER_ID && (
+                <>
+                  <p className="text-xs font-bold mb-2 text-orange-400 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)] tracking-wide">
+                    ✦ AI BOT ANSWERED:
+                  </p>
+                  <hr className="border-orange-200 mb-4" />
+                </>
+              )}
               <p className="text-gray-700 text-sm mb-4 whitespace-pre-wrap">{a.body}</p>
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <Upvote count={a.vote_count} targetId={a.id} targetType="answer" voted={votedIds.has(a.id)} />

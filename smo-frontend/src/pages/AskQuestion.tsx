@@ -198,10 +198,19 @@ function AskQuestion() {
           </div>
 
           {/* AI Answer */}
-          <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-gray-50 border border-gray-200">
-            <div>
-              <p className="text-sm font-semibold text-black">AI Answer</p>
-              <p className="text-xs text-gray-500 mt-0.5">Let SMO Bot generate an answer when you post</p>
+          <div className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-colors ${
+            aiAnswerEnabled ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              {aiAnswerEnabled && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-orange-700" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a1 1 0 0 1 .894.553l2.382 4.826 5.327.774a1 1 0 0 1 .554 1.706l-3.855 3.757.91 5.306a1 1 0 0 1-1.451 1.054L12 17.527l-4.761 2.449a1 1 0 0 1-1.451-1.054l.91-5.306L2.843 9.859a1 1 0 0 1 .554-1.706l5.327-.774L11.106 2.553A1 1 0 0 1 12 2z"/>
+                </svg>
+              )}
+              <div>
+                <p className={`text-sm font-semibold transition-colors ${aiAnswerEnabled ? 'text-orange-700' : 'text-black'}`}>AI Answer</p>
+                <p className={`text-xs mt-0.5 transition-colors ${aiAnswerEnabled ? 'text-orange-500' : 'text-gray-500'}`}>Let SMO Bot generate an answer when you post</p>
+              </div>
             </div>
             <Toggle enabled={aiAnswerEnabled} onToggle={() => setAiAnswerEnabled((v) => !v)} />
           </div>
