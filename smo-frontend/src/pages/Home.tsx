@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import QuestionCard from '../components/QuestionCard'
+import { Sidebar } from '../components/Sidebar'
 import { useAuth } from '../hooks/useAuth'
 import type { QuestionSummary } from '../types'
 
@@ -129,6 +130,7 @@ function Home() {
     <div>
       <Navbar />
 
+      <Sidebar />
       <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 flex-1 mr-3">
