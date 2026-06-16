@@ -91,6 +91,43 @@ router.post('/', requireAuth, async (req, res) => {
 })
 
 // ─────────────────────────────────────────────
+// POST /questions/:id/ai-answer - genereaza un raspuns AI (utilizator autentificat)
+// ─────────────────────────────────────────────
+router.post('/:id/ai-answer', requireAuth, async (req, res) => {
+  const qId = req.params.id
+  const aiUserId = process.env.SMO_AI_USER_ID
+
+  if (!aiUserId) {
+    return res.status(503).json({ error: 'AI user not configured (SMO_AI_USER_ID missing)' })
+  }
+
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('id, title, description')
+    .eq('id', qId)
+    .single()
+
+  if (qErr || !question) return res.status(404).json({ error: 'Intrebarea nu a fost gasita' })
+
+  try {
+    const aiBody = await generateAnswerFromAI(question.title, question.description)
+
+    const { data: answer, error: aErr } = await supabase
+      .from('answers')
+      .insert({ question_id: qId, body: aiBody, author_id: aiUserId })
+      .select('*, author:profiles!author_id(id,username)')
+      .single()
+
+    if (aErr) return res.status(500).json({ error: aErr.message })
+
+    res.status(201).json(answer)
+  } catch (e) {
+    console.error('[smo-ai] generate-answer failed:', e.message)
+    res.status(502).json({ error: 'AI could not generate an answer' })
+  }
+})
+
+// ─────────────────────────────────────────────
 // PATCH /questions/:id/tags - editeaza tagurile (doar autorul)
 // ─────────────────────────────────────────────
 router.patch('/:id/tags', requireAuth, async (req, res) => {
@@ -197,6 +234,25 @@ module.exports = router
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
+async function generateAnswerFromAI(title, description) {
+  const url = process.env.SMO_AI_URL ?? 'http://localhost:3100'
+  const secret = process.env.SMO_AI_SECRET ?? ''
+
+  const res = await fetch(`${url}/generate-answer`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': secret,
+    },
+    body: JSON.stringify({ title, description }),
+  })
+
+  if (!res.ok) throw new Error(`smo-ai responded with ${res.status}`)
+  const { answer } = await res.json()
+  if (!answer) throw new Error('Empty answer from AI')
+  return answer
+}
+
 async function suggestTagsFromAI(title, description) {
   const url = process.env.SMO_AI_URL ?? 'http://localhost:3100'
   const secret = process.env.SMO_AI_SECRET ?? ''

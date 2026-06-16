@@ -7,9 +7,10 @@ import { logger } from './logger.js'
 
 const TAGS_SYSTEM_PROMPT =
   'You are a tagging assistant for Stack_my_Overflow, a Q&A platform for software developers.\n\n' +
-  'Given a question title and optional description, suggest between 3 and 5 tags that best categorize the question.\n\n' +
+  'Given a question title and optional description, suggest up to 5 tags that best categorize the question. Use as many as are relevant — do not pad with generic tags just to reach a higher count.\n\n' +
   'Rules:\n' +
   '- Return ONLY a raw JSON array of lowercase tag strings. No explanation, no markdown, no extra text.\n' +
+  '- If the question is NOT related to software development, programming, computer science, or technology, return exactly: ["other"]\n' +
   '- Include at least ONE specific tag that reflects the precise topic or subtopic (e.g. "css-flexbox", "binary-search", "react-hooks", "sql-joins").\n' +
   '- Include at least ONE general tag that represents the broad technology, language, or domain (e.g. "javascript", "python", "html", "algorithms", "databases").\n' +
   '- Tags must be 1-30 characters, lowercase, using only letters, digits, hyphens, dots, # and +.\n' +
@@ -18,7 +19,9 @@ const TAGS_SYSTEM_PROMPT =
   '- Maximum 5 tags total.\n\n' +
   'Examples:\n' +
   'Question: "How to center a div in CSS?" → ["css","html","css-flexbox","frontend","web-design"]\n' +
-  'Question: "How do I reverse a linked list in Python?" → ["python","data-structures","linked-list","algorithms"]'
+  'Question: "How do I reverse a linked list in Python?" → ["python","data-structures","linked-list","algorithms"]\n' +
+  'Question: "What is the best recipe for chocolate cake?" → ["other"]\n' +
+  'Question: "Who won the World Cup in 2022?" → ["other"]'
 
 const INTERNAL_SECRET = process.env.SMO_AI_SECRET
 if (!INTERNAL_SECRET) {
@@ -47,6 +50,7 @@ const limiter = rateLimit({
 })
 app.use('/ask', limiter)
 app.use('/suggest-tags', limiter)
+app.use('/generate-answer', limiter)
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -111,6 +115,39 @@ app.post('/suggest-tags', async (req, res) => {
     res.json({ tags, model: MODEL, provider: PROVIDER })
   } catch (err) {
     logger.error('suggest-tags error:', err.message)
+    const status = err.circuitOpen ? 503 : err.isTimeout ? 504 : 500
+    res.status(status).json({ error: err.message, circuit: breaker.state })
+  }
+})
+
+const ANSWER_SYSTEM_PROMPT =
+  'You are SMO Bot, a knowledgeable programming assistant on Stack_my_Overflow, a Q&A platform for developers.\n' +
+  'Given a question title and description, write a clear, accurate, and concise answer.\n' +
+  'Use plain text only — no markdown, no code fences unless the answer genuinely requires a code snippet.\n' +
+  'Be direct and focus on solving the problem. If the question is not related to software, programming, or technology, ' +
+  'reply with exactly: "This question is outside my area of expertise. I can only answer software and technology questions."'
+
+// Genereaza un raspuns AI pentru o intrebare
+app.post('/generate-answer', async (req, res) => {
+  try {
+    const { title, description } = req.body
+    if (!title || typeof title !== 'string') {
+      return res.status(400).json({ error: '"title" is required.' })
+    }
+
+    const userContent = description
+      ? `Question: ${sanitizeInput(title, 300)}\n\nDescription: ${sanitizeInput(description, 2000)}`
+      : `Question: ${sanitizeInput(title, 300)}`
+
+    const msgs = [
+      { role: 'system', content: ANSWER_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ]
+
+    const answer = await llm(msgs)
+    res.json({ answer, model: MODEL, provider: PROVIDER })
+  } catch (err) {
+    logger.error('generate-answer error:', err.message)
     const status = err.circuitOpen ? 503 : err.isTimeout ? 504 : 500
     res.status(status).json({ error: err.message, circuit: breaker.state })
   }

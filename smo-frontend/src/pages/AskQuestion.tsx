@@ -20,6 +20,23 @@ function RemovableTag({ name, onRemove }: { name: string; onRemove: () => void }
   )
 }
 
+function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none ${
+        enabled ? 'bg-orange-500' : 'bg-gray-300'
+      }`}
+      aria-pressed={enabled}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+        enabled ? 'translate-x-5' : 'translate-x-1'
+      }`} />
+    </button>
+  )
+}
+
 function AskQuestion() {
   const navigate = useNavigate()
   const { user, accessToken, refreshProfile } = useAuth()
@@ -29,6 +46,7 @@ function AskQuestion() {
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [aiTagsEnabled, setAiTagsEnabled] = useState(false)
+  const [aiAnswerEnabled, setAiAnswerEnabled] = useState(false)
   const [errors, setErrors] = useState<{ title?: string; description?: string; general?: string }>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -73,8 +91,7 @@ function AskQuestion() {
     setSubmitting(true)
 
     try {
-      // Trimitem tot catre backend — el se ocupa de tags, question_tags si reputatie (+15)
-      await request('/questions', {
+      const question = await request<{ id: string }>('/questions', {
         method: 'POST',
         body: JSON.stringify(
           aiTagsEnabled
@@ -83,11 +100,18 @@ function AskQuestion() {
         ),
       }, accessToken)
 
-      // Navigam imediat la home, refresh profilului ruleaza in fundal
-      navigate('/')
+      // Daca AI answer e activat, trimitem cererea dupa ce avem ID-ul intrebarii
+      if (aiAnswerEnabled) {
+        try {
+          await request(`/questions/${question.id}/ai-answer`, { method: 'POST' }, accessToken)
+        } catch { /* eroare la AI answer — navigam oricum la intrebare */ }
+      }
+
       refreshProfile().catch(() => {})
+      // Navigam la intrebarea postata (nu la home) ca sa se vada eventualul raspuns AI
+      navigate(`/question/${question.id}`)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong.'
+      const msg = (err as { error?: string })?.error ?? (err instanceof Error ? err.message : 'Something went wrong.')
       setErrors({ general: msg })
     } finally {
       setSubmitting(false)
@@ -128,6 +152,7 @@ function AskQuestion() {
             {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
           </div>
 
+          {/* Tags */}
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between mb-1">
               <div>
@@ -138,20 +163,7 @@ function AskQuestion() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-gray-500">AI tags</span>
-                <button
-                  type="button"
-                  onClick={() => setAiTagsEnabled((v) => !v)}
-                  className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none ${
-                    aiTagsEnabled ? 'bg-orange-500' : 'bg-gray-300'
-                  }`}
-                  aria-pressed={aiTagsEnabled}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      aiTagsEnabled ? 'translate-x-5' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
+                <Toggle enabled={aiTagsEnabled} onToggle={() => setAiTagsEnabled((v) => !v)} />
               </div>
             </div>
 
@@ -185,6 +197,15 @@ function AskQuestion() {
             )}
           </div>
 
+          {/* AI Answer */}
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-gray-50 border border-gray-200">
+            <div>
+              <p className="text-sm font-semibold text-black">AI Answer</p>
+              <p className="text-xs text-gray-500 mt-0.5">Let SMO Bot generate an answer when you post</p>
+            </div>
+            <Toggle enabled={aiAnswerEnabled} onToggle={() => setAiAnswerEnabled((v) => !v)} />
+          </div>
+
           {errors.general && (
             <p className="text-sm text-red-500 text-center">{errors.general}</p>
           )}
@@ -194,7 +215,7 @@ function AskQuestion() {
             disabled={submitting}
             className="self-start px-6 py-3 rounded-full bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 hover:shadow-md disabled:bg-orange-300 transition"
           >
-            {submitting ? 'Posting...' : 'Post your question'}
+            {submitting ? (aiAnswerEnabled ? 'Posting & generating answer...' : 'Posting...') : 'Post your question'}
           </button>
 
         </form>

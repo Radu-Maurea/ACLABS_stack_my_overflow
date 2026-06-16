@@ -12,6 +12,7 @@ import { request } from '../lib/api'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string
+const SMO_AI_USER_ID = import.meta.env.VITE_SMO_AI_USER_ID as string
 
 function publicFetch(path: string) {
   return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
@@ -337,7 +338,13 @@ function QuestionDetailPage() {
 
         <div className="flex flex-col gap-4">
           {question.answers.map((a) => (
-            <div key={a.id} className={`border rounded-lg p-6 shadow-sm ${a.is_accepted ? 'border-green-400 bg-green-50/30' : ''}`}>
+            <div key={a.id} className={`border rounded-lg p-6 shadow-sm transition-shadow ${
+                a.is_accepted
+                  ? 'border-green-400 bg-green-50/30'
+                  : a.author_id === SMO_AI_USER_ID
+                    ? 'border-orange-200 bg-orange-50/20 shadow-[0_0_18px_rgba(251,146,60,0.2)]'
+                    : ''
+              }`}>
               <p className="text-gray-700 text-sm mb-4 whitespace-pre-wrap">{a.body}</p>
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <Upvote count={a.vote_count} targetId={a.id} targetType="answer" voted={votedIds.has(a.id)} />
