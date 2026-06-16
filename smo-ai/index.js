@@ -6,9 +6,19 @@ import { llm, MODEL, PROVIDER, sysMsg, breaker } from './llm.js'
 import { logger } from './logger.js'
 
 const TAGS_SYSTEM_PROMPT =
-  'You are a tagging assistant for Stack_my_Overflow, a Q&A platform for software developers. ' +
-  'Given a question title and optional description, return ONLY a JSON array of 3-5 lowercase tag strings. ' +
-  'No explanation, no markdown, just the raw JSON array. Example: ["javascript","react","hooks"]'
+  'You are a tagging assistant for Stack_my_Overflow, a Q&A platform for software developers.\n\n' +
+  'Given a question title and optional description, suggest between 3 and 5 tags that best categorize the question.\n\n' +
+  'Rules:\n' +
+  '- Return ONLY a raw JSON array of lowercase tag strings. No explanation, no markdown, no extra text.\n' +
+  '- Include at least ONE specific tag that reflects the precise topic or subtopic (e.g. "css-flexbox", "binary-search", "react-hooks", "sql-joins").\n' +
+  '- Include at least ONE general tag that represents the broad technology, language, or domain (e.g. "javascript", "python", "html", "algorithms", "databases").\n' +
+  '- Tags must be 1-30 characters, lowercase, using only letters, digits, hyphens, dots, # and +.\n' +
+  '- Use hyphens instead of spaces (e.g. "linked-list", not "linked list").\n' +
+  '- Do not repeat the same concept at different levels of specificity.\n' +
+  '- Maximum 5 tags total.\n\n' +
+  'Examples:\n' +
+  'Question: "How to center a div in CSS?" → ["css","html","css-flexbox","frontend","web-design"]\n' +
+  'Question: "How do I reverse a linked list in Python?" → ["python","data-structures","linked-list","algorithms"]'
 
 const INTERNAL_SECRET = process.env.SMO_AI_SECRET
 if (!INTERNAL_SECRET) {

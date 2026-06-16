@@ -1,7 +1,7 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import type { Question, Answer, Comment } from '../types'
-import { TagPill } from '../components/TagPill'
+import { TagPill, tagColor } from '../components/TagPill'
 import { Upvote } from '../components/Upvote'
 import { Status } from '../components/Status'
 import { Navbar } from '../components/Navbar'
@@ -80,6 +80,13 @@ function QuestionDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editingTags, setEditingTags] = useState(false)
+  const [editTags, setEditTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [savingTags, setSavingTags] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!id) return
     setLoading(true)
@@ -102,6 +109,54 @@ function QuestionDetailPage() {
       .then((rows: { target_id: string }[]) => setVotedIds(new Set(rows.map((r) => r.target_id))))
       .catch(() => {})
   }, [user, accessToken, question])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [menuOpen])
+
+  function openTagEditor() {
+    setEditTags(question?.question_tags.map((qt) => qt.tag.name) ?? [])
+    setTagInput('')
+    setEditingTags(true)
+    setMenuOpen(false)
+  }
+
+  function addEditTag(raw: string) {
+    const normalized = raw.trim().toLowerCase().replace(/\s+/g, '-')
+    if (normalized && !editTags.includes(normalized) && editTags.length < 5) {
+      setEditTags((prev) => [...prev, normalized])
+    }
+    setTagInput('')
+  }
+
+  function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addEditTag(tagInput) }
+  }
+
+  async function handleSaveTags() {
+    if (!id || !accessToken) return
+    setSavingTags(true)
+    try {
+      const finalTags = tagInput.trim() ? [...new Set([...editTags, tagInput.trim().toLowerCase().replace(/\s+/g, '-')])] : editTags
+      await request(`/questions/${id}/tags`, {
+        method: 'PATCH',
+        body: JSON.stringify({ tags: finalTags }),
+      }, accessToken)
+      setQuestion((prev) => prev ? {
+        ...prev,
+        question_tags: finalTags.map((name) => ({ tag: { name } })),
+      } : prev)
+      setEditingTags(false)
+      setTagInput('')
+    } catch { /* ignore */ } finally {
+      setSavingTags(false)
+    }
+  }
 
   async function handleAccept(answerId: string) {
     if (!accessToken) return
@@ -174,11 +229,85 @@ function QuestionDetailPage() {
 
         {/* Intrebare */}
         <div className="bg-gray-50 rounded-2xl p-6 mb-3">
-          <div className="flex gap-2 flex-wrap mb-3">
-            {question.question_tags.map((qt) => (
-              <TagPill key={qt.tag.name} name={qt.tag.name} />
-            ))}
+          <div className="flex items-start justify-between gap-2 mb-3">
+            {/* Taguri — view sau edit mode */}
+            {editingTags ? (
+              <div className="flex-1">
+                <div className="rounded-xl px-4 py-2 bg-white border border-orange-300 flex flex-wrap gap-2 items-center focus-within:ring-2 focus-within:ring-orange-300 transition">
+                  {editTags.map((tag) => (
+                    <span key={tag} className={`flex items-center gap-1 text-xs font-medium pl-3 pr-2 py-1 rounded-full ${tagColor(tag)}`}>
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => setEditTags((prev) => prev.filter((t) => t !== tag))}
+                        className="hover:opacity-60 transition-opacity font-bold leading-none"
+                      >×</button>
+                    </span>
+                  ))}
+                  {editTags.length < 5 && (
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                      placeholder={editTags.length === 0 ? 'e.g. javascript, react' : ''}
+                      className="flex-1 min-w-[120px] bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none"
+                      autoFocus
+                    />
+                  )}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={handleSaveTags}
+                    disabled={savingTags}
+                    className="px-4 py-1.5 rounded-full bg-orange-500 text-white text-xs font-medium hover:bg-orange-600 disabled:bg-orange-300 transition"
+                  >
+                    {savingTags ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => { setEditingTags(false); setTagInput('') }}
+                    className="px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 flex-wrap">
+                {question.question_tags.map((qt) => (
+                  <TagPill key={qt.tag.name} name={qt.tag.name} />
+                ))}
+              </div>
+            )}
+
+            {/* Three-dots menu — vizibil doar autorului */}
+            {user?.id === question.author_id && !editingTags && (
+              <div className="relative shrink-0" ref={menuRef}>
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition"
+                  aria-label="Question options"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <circle cx="10" cy="4" r="1.5" />
+                    <circle cx="10" cy="10" r="1.5" />
+                    <circle cx="10" cy="16" r="1.5" />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-xl shadow-lg z-10 py-1 min-w-[130px]">
+                    <button
+                      onClick={openTagEditor}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      Edit tags
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
           <p className="text-lg font-semibold text-black mb-3">{question.title}</p>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{question.description}</p>
         </div>

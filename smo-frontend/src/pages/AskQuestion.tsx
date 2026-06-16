@@ -28,6 +28,7 @@ function AskQuestion() {
   const [description, setDescription] = useState('')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
+  const [aiTagsEnabled, setAiTagsEnabled] = useState(false)
   const [errors, setErrors] = useState<{ title?: string; description?: string; general?: string }>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -75,7 +76,11 @@ function AskQuestion() {
       // Trimitem tot catre backend — el se ocupa de tags, question_tags si reputatie (+15)
       await request('/questions', {
         method: 'POST',
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), tags: finalTags }),
+        body: JSON.stringify(
+          aiTagsEnabled
+            ? { title: title.trim(), description: description.trim(), useAiTags: true }
+            : { title: title.trim(), description: description.trim(), tags: finalTags }
+        ),
       }, accessToken)
 
       // Navigam imediat la home, refresh profilului ruleaza in fundal
@@ -124,27 +129,60 @@ function AskQuestion() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-black">Tags</label>
-            <p className="text-xs text-gray-500 mb-1">Add up to 5 tags. Press Enter or comma to add.</p>
-            <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-200 focus-within:ring-2 focus-within:ring-orange-300 transition flex flex-wrap gap-2 items-center">
-              {tags.map((tag) => (
-                <RemovableTag
-                  key={tag}
-                  name={tag}
-                  onRemove={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                />
-              ))}
-              {tags.length < 5 && (
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  placeholder={tags.length === 0 ? 'e.g. javascript, react, css' : ''}
-                  className="flex-1 min-w-[120px] bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none"
-                />
-              )}
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <label className="text-sm font-semibold text-black">Tags</label>
+                {!aiTagsEnabled && (
+                  <p className="text-xs text-gray-500 mt-0.5">Add up to 5 tags. Press Enter or comma to add.</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-gray-500">AI tags</span>
+                <button
+                  type="button"
+                  onClick={() => setAiTagsEnabled((v) => !v)}
+                  className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none ${
+                    aiTagsEnabled ? 'bg-orange-500' : 'bg-gray-300'
+                  }`}
+                  aria-pressed={aiTagsEnabled}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      aiTagsEnabled ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
+
+            {aiTagsEnabled ? (
+              <div className="rounded-xl px-4 py-3 bg-orange-50 border border-orange-200 flex items-center gap-2 text-sm text-orange-700">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a1 1 0 0 1 .894.553l2.382 4.826 5.327.774a1 1 0 0 1 .554 1.706l-3.855 3.757.91 5.306a1 1 0 0 1-1.451 1.054L12 17.527l-4.761 2.449a1 1 0 0 1-1.451-1.054l.91-5.306L2.843 9.859a1 1 0 0 1 .554-1.706l5.327-.774L11.106 2.553A1 1 0 0 1 12 2z"/>
+                </svg>
+                AI will automatically generate tags based on your question
+              </div>
+            ) : (
+              <div className="rounded-xl px-4 py-3 bg-gray-50 border border-gray-200 focus-within:ring-2 focus-within:ring-orange-300 transition flex flex-wrap gap-2 items-center">
+                {tags.map((tag) => (
+                  <RemovableTag
+                    key={tag}
+                    name={tag}
+                    onRemove={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                  />
+                ))}
+                {tags.length < 5 && (
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    placeholder={tags.length === 0 ? 'e.g. javascript, react, css' : ''}
+                    className="flex-1 min-w-[120px] bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none"
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {errors.general && (

@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
 // POST /questions - ruta protejata, doar utilizatori autentificati
 // ─────────────────────────────────────────────
 router.post('/', requireAuth, async (req, res) => {
-  const { title, description, tags = [] } = req.body
+  const { title, description, tags = [], useAiTags = false } = req.body
 
   // Validam ca avem cel putin titlu si descriere
   if (!title?.trim() || !description?.trim()) {
@@ -51,8 +51,19 @@ router.post('/', requireAuth, async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message })
 
+  // Daca useAiTags=true, cerem taguri de la smo-ai; altfel folosim cele trimise de user
+  let finalTags = tags
+  if (useAiTags) {
+    try {
+      finalTags = await suggestTagsFromAI(title.trim(), description.trim())
+    } catch (e) {
+      console.error('[smo-ai] suggest-tags failed:', e.message)
+      finalTags = []
+    }
+  }
+
   // Procesam tag-urile: upsert = insert daca nu exista, ignora daca exista
-  for (const tagName of tags) {
+  for (const tagName of finalTags) {
     const { data: tag } = await supabase
       .from('tags')
       .upsert({ name: tagName.toLowerCase() }, { onConflict: 'name' })
@@ -77,6 +88,46 @@ router.post('/', requireAuth, async (req, res) => {
     .eq('id', req.user.id)
 
   res.status(201).json({ ...question, reputation: newReputation })
+})
+
+// ─────────────────────────────────────────────
+// PATCH /questions/:id/tags - editeaza tagurile (doar autorul)
+// ─────────────────────────────────────────────
+router.patch('/:id/tags', requireAuth, async (req, res) => {
+  const qId = req.params.id
+  const { tags } = req.body
+
+  if (!Array.isArray(tags)) {
+    return res.status(400).json({ error: '"tags" trebuie sa fie un array' })
+  }
+
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('author_id')
+    .eq('id', qId)
+    .single()
+
+  if (qErr || !question) return res.status(404).json({ error: 'Intrebarea nu a fost gasita' })
+  if (question.author_id !== req.user.id) return res.status(403).json({ error: 'Nu ai permisiunea sa editezi aceasta intrebare' })
+
+  // Stergem toate tagurile existente si le inlocuim
+  await supabase.from('question_tags').delete().eq('question_id', qId)
+
+  const finalTags = tags.slice(0, 5).map(t => String(t).toLowerCase().trim()).filter(Boolean)
+
+  for (const tagName of finalTags) {
+    const { data: tag } = await supabase
+      .from('tags')
+      .upsert({ name: tagName }, { onConflict: 'name' })
+      .select()
+      .single()
+
+    if (tag) {
+      await supabase.from('question_tags').insert({ question_id: qId, tag_id: tag.id })
+    }
+  }
+
+  res.json({ tags: finalTags })
 })
 
 // ─────────────────────────────────────────────
@@ -142,5 +193,26 @@ router.patch('/:id/vote', requireAuth, async (req, res) => {
 })
 
 module.exports = router
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+async function suggestTagsFromAI(title, description) {
+  const url = process.env.SMO_AI_URL ?? 'http://localhost:3100'
+  const secret = process.env.SMO_AI_SECRET ?? ''
+
+  const res = await fetch(`${url}/suggest-tags`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': secret,
+    },
+    body: JSON.stringify({ title, description }),
+  })
+
+  if (!res.ok) throw new Error(`smo-ai responded with ${res.status}`)
+  const { tags } = await res.json()
+  return Array.isArray(tags) ? tags : []
+}
 
 
