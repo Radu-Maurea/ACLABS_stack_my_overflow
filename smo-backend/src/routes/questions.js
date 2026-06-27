@@ -147,7 +147,13 @@ router.patch('/:id/tags', requireAuth, async (req, res) => {
   if (qErr || !question) return res.status(404).json({ error: 'Intrebarea nu a fost gasita' })
   if (question.author_id !== req.user.id) return res.status(403).json({ error: 'Nu ai permisiunea sa editezi aceasta intrebare' })
 
-  // Stergem toate tagurile existente si le inlocuim
+  // Retinem tag-urile vechi inainte de stergere, ca sa putem curata orfanii dupa
+  const { data: oldLinks } = await supabase
+    .from('question_tags')
+    .select('tag_id')
+    .eq('question_id', qId)
+  const oldTagIds = (oldLinks ?? []).map(r => r.tag_id)
+
   await supabase.from('question_tags').delete().eq('question_id', qId)
 
   const finalTags = tags.slice(0, 5).map(t => String(t).toLowerCase().trim()).filter(Boolean)
@@ -161,6 +167,18 @@ router.patch('/:id/tags', requireAuth, async (req, res) => {
 
     if (tag) {
       await supabase.from('question_tags').insert({ question_id: qId, tag_id: tag.id })
+    }
+  }
+
+  // Stergem tag-urile vechi care nu mai sunt folosite de nicio intrebare
+  for (const tagId of oldTagIds) {
+    const { count } = await supabase
+      .from('question_tags')
+      .select('*', { count: 'exact', head: true })
+      .eq('tag_id', tagId)
+
+    if (count === 0) {
+      await supabase.from('tags').delete().eq('id', tagId)
     }
   }
 

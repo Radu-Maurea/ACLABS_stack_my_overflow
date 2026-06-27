@@ -17,6 +17,7 @@ function Users() {
       select: 'id,username,reputation',
       order: 'reputation.desc',
       [`id`]: `neq.${SMO_AI_USER_ID}`,
+      limit: '5',
     })
 
     fetch(`${SUPABASE_URL}/rest/v1/profiles?${params}`, {
@@ -29,12 +30,12 @@ function Users() {
   }, [])
 
   return (
-    <div>
+    <div className="pt-14">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6 items-start">
         <Sidebar />
         <main className="flex-1">
-          <p className="text-2xl font-bold text-black mb-6">Users</p>
+          <p className="text-2xl font-bold text-black mb-6">Top Users</p>
 
           {loading && (
             <p className="text-sm text-gray-400">Loading...</p>

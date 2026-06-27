@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../lib/api'
 
@@ -13,6 +13,10 @@ export function Upvote({ count: initialCount, targetId, targetType, voted: initi
   const { user, accessToken } = useAuth()
   const [count, setCount] = useState(initialCount)
   const [voted, setVoted] = useState(initialVoted)
+
+  useEffect(() => {
+    setVoted(initialVoted)
+  }, [initialVoted])
   const [loading, setLoading] = useState(false)
 
   const handleVote = async (e: React.MouseEvent) => {

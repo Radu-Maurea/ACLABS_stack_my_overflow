@@ -119,7 +119,7 @@ function AskQuestion() {
   }
 
   return (
-    <div>
+    <div className="pt-14">
       <Navbar />
       <div className="max-w-3xl mx-auto px-4 py-10">
         <p className="text-2xl font-bold text-black mb-8">Ask a Question</p>

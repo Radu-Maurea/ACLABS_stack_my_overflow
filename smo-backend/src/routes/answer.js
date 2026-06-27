@@ -67,7 +67,15 @@ router.patch('/:id/vote', requireAuth, async (req, res) => {
     .eq('id', aId)
     .single()
 
-  res.json({ vote_count: a.vote_count })
+  const { data: activeVote } = await supabase
+    .from('votes')
+    .select('id')
+    .eq('target_id', aId)
+    .eq('target_type', 'answer')
+    .eq('user_id', uid)
+    .maybeSingle()
+
+  res.json({ vote_count: a.vote_count, voted: !!activeVote })
 })
 
 // ─────────────────────────────────────────────

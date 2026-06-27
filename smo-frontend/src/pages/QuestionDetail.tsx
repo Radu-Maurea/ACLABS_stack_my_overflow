@@ -206,25 +206,25 @@ function QuestionDetailPage() {
   }
 
   if (loading) return (
-    <div><Navbar />
+    <div className="pt-14"><Navbar />
       <div className="flex justify-center items-center py-32 text-gray-400 text-sm">Se incarca intrebarea...</div>
     </div>
   )
 
   if (error === 'not_found' || !question) return (
-    <div><Navbar />
+    <div className="pt-14"><Navbar />
       <div className="max-w-3xl mx-auto p-6 text-gray-500">Intrebarea nu a fost gasita.</div>
     </div>
   )
 
   if (error) return (
-    <div><Navbar />
+    <div className="pt-14"><Navbar />
       <div className="max-w-3xl mx-auto p-6 text-red-500">{error}</div>
     </div>
   )
 
   return (
-    <div>
+    <div className="pt-14">
       <Navbar />
       <div className="max-w-5xl mx-auto px-10 py-6">
 

@@ -5,6 +5,7 @@ import AskQuestion from './pages/AskQuestion'
 import Home from './pages/Home'
 import QuestionDetailPage from './pages/QuestionDetail'
 import Users from './pages/Users'
+import Tags from './pages/Tags'
 import { AuthProvider } from './hooks/useAuth'
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/question/:id" element={<QuestionDetailPage />} />
             <Route path="/questions/new" element={<AskQuestion />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/tags" element={<Tags />} />
           </Routes>
         </div>
       </BrowserRouter>
